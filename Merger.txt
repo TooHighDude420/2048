@@ -1,0 +1,128 @@
+					merge game/idle game
+
+upgrade menu nog mooier maken
+nog meer voormpjes maken
+
+reward delay moet naar 300f als de game gebuild word
+
+enteties bewegennog een beetje raar
+
+touch controls toevoegen
+rewards die op het scherm komen afmaken, breakpoint is waar het fout gaat
+offline tijd gaat niet goed
+
+leeftijds check bij eerste start
+google ads of gelijken implementeren
+
+ upgrades verzinnen:
+-enteties meer waard
+-getimde spawn hoogere kans hogere te spawnen
+
+achtergrond maken
+
+diamanten en power-ups:
+-time skip
+2h, 4h, 8h, 12h, 24h
+-coins
+met levels
+10% van speler totaal, 50% van speler totaal, 120% van speler totaal, 200% van speler totaal
+-noads
+1 dag, 1 week, 4 weken
+
+updates en extra's
+
+minigames:
+-chrome dino spel
+-rad
+-memmory
+
+prestige kunnen gaan
+
+goedkoop adloos voor altijd aanbieden
+
+adloos voor coins??? belachelijk bedrag
+nieuwe werelden die geld kosten
+
+quests
+daily rewards
+
+___________________________________________
+
+change log 13-02-2024
+
+aangepast hoeveel geld je krijgt per seconde per entetie
+setCoins() naar 1f gezet
+saven en laden werkt
+data die gelaad word word goed gebruikt
+de goede data word goed opgeslagen
+upgrades scherm gemaakt (concept)
+upgrade gemaakt die de tijd dat het kost voor een entetie spawned gemaakt
+
+____________________________________________
+
+change log 14-02-2024
+
+geladen enteties worden nu verspreid
+code leesbaarder gemaakt en Update() versimpeld
+de upgrade spawnTimer word elke keer dat je hem koopt voor nu met 2 muntjes duurder
+als je levelup gaat krijg je, je level * 100 aan muntjes voor nu
+je hebt een level word nog niet opgeslagen
+je huidige exp word laten zien
+de exp die je nodig hebt word laten zien
+je zit nu naast de coins die je nu hebt ook hoeveel je er per seconde krijgt
+je level word nu opgeslagen en geladen
+je huidige exp word nu opgeslagen en geladen
+je nodige exp word nu opgeslagen en geladen
+datum en tijd worden opgeslagen
+
+_____________________________________________
+
+change log 15-02-2024
+
+datum en tijd worden nu opgeslagen en geladen
+datum en tijd word vergeleken
+je krijgt nu je muntjes per seconde keer de seconden dat je weg was tot een max van 2 uur voor nu
+object pooling onderzocht en besloten dat het niet hiervoor is
+als het goed is slaat de game op als je hem op de achtergrond laat gaan
+coins per seconden staan nu onder de huidige coins i.p.v er naast
+save game functie zo gemaakt dat hij geen parameters nodig heeft
+langer offline verdienen een upgrade gemaakt met knop en text
+de kosten van de upgrades worden nu opgeslagen
+waardes gebalanceerd
+
+_____________________________________________
+
+change los 16-02-2024
+
+het upgrades menu is mooier gemaakt
+je kan nu zien wat de waaardes zijn die je upgrade
+je hebt nu een limiet van enteties die op scherm kunnen zijn
+je kan het limiet upgraden
+je kan zien hoeveel enteties en op scherm zijn en de max staat er naast
+je krijgt nu geen geld meer als je oflline tijd upgrade
+de spawn time gaan nu van 59 naar 0
+spawn time upgrade is nu -0.1
+spawn time word nu als het goed is goed opgeslagen
+
+_______________________________________________
+
+change log 17-02-2024
+
+ik heb de code geschreven voor muntjes rewards die op het scherm tevoorschijn kunnen komen
+de rewards die op scherm komen werken nog niet helemaal goed
+
+_______________________________________________
+
+change log 19-02-2024
+
+de enteties zijn veranderd naar aliens
+er zijn nu 7 aliens in totaal
+
+_______________________________________________
+
+changelog 22-02-2024
+
+ik heb timers omgeschreven naar coroutines waar toepasselijk
+code gestroomlijnd peformance is aanzienelijk verbeterd
+ik heb er voor gezorgd dat de enteties rondlopen
+
