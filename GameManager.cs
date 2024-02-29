@@ -6,6 +6,8 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
+using GooglePlayGames;
+using GooglePlayGames.BasicApi;
 
 public class GameManager : MonoBehaviour
 {
@@ -15,14 +17,19 @@ public class GameManager : MonoBehaviour
         actualSpawnTime, actualOfflineTime;
     public List<GameObject> Enteties;
     public CanvasGroup Upgrades_Screen;
+    public CanvasGroup UI;
+    public CanvasGroup Loading_Screen;
     public GameObject coinReward;
+    public bool touched = false;
+    public List<TextMeshProUGUI> bugList;
     //private varriables to use in the code
     private TextMeshProUGUI rewardText;
     private SaveManager save;
+    public Transform selected;
     private TimeSpan maxOffline;
     private string lastDateTime;
     private List<string> spawnedEnteties;
-    private float CoinsPerSecond, current, timerReward, timerSpawn, spawnDelay, exp, expNeeded, rewardDelay, reward;
+    private float CoinsPerSecond, current,  timerReward,  spawnDelay, exp, expNeeded, rewardDelay, reward;
     private string loadGamePath;
     private int level, maxOfflineTimeH, maxOfflineTimeM, maxEnteties, curEntetiesOnScreen, maxUpgradeCost, Spawned;
     private bool exceeded;
@@ -33,40 +40,46 @@ public class GameManager : MonoBehaviour
         defaultMaxUpgradeCost = 100;
     public const string Threek = "Threek", Cube = "Cube", Thrat = "Thrat", Cube2 = "Cube2", vijf = "5", zes = "6", zeven = "7";
     private const string FileName = "/PlayerData.json";
+    Action<string> code;
     
+
+    private void Awake()
+    {
+        LoadingScreen();
+    }
     private void Start()
     {
-        //init list spawnedentetiesfor use later
-        spawnedEnteties = new();
-        //set save file location
-        loadGamePath = Application.persistentDataPath + FileName;
-        //checking if the save file exists
-        if (!File.Exists(loadGamePath))
+        /*PlayGamesPlatform.Instance.Authenticate(ProcessAuthentication);
+        void ProcessAuthentication(SignInStatus status)
         {
-            //no save found so starting with default values
-            defaultValues();
-        }
-        else if (File.Exists(loadGamePath))
-        {
-            //file exists so loading and aplying game data
-            loader();
-        }
-        //naar 300f zetten voor build
-        rewardDelay = 30f;
-        //timer that adds coins every second
-        StartCoroutine(CoinsTimer(coinDelay));
-        //timer that saves the game every 60 seconds
-        StartCoroutine(SaveTimer(saveDelay));
+            if (status == SignInStatus.Success)
+            {
+                // Continue with Play Games Services
+                PlayGamesPlatform.Instance.RequestServerSideAccess(
+                /* forceRefreshToken=  false,
+                (string code) => {
+                    //code to server
+                });
+            }
+            else
+            {
+                // Disable your integration with Play Games Services or show a login button
+                // to ask users to sign-in. Clicking it should call
+                // PlayGamesPlatform.Instance.ManuallyAuthenticate(ProcessAuthentication).
+            }
+        }*/
+
+        
     }
 
     private void Update()
     {
         //checking if there are more enteties than allowed
         checkEnteties();
-        if (!exceeded)
+        if (exceeded)
         {
             //timer that checks if it is time to spawn a entetie
-            CheckForSpawn(spawnDelay);
+            StopCoroutine(CheckForSpawn(spawnDelay));
         }
         //set the text that displays the exp
         CheckForExpUpdate();
@@ -74,20 +87,104 @@ public class GameManager : MonoBehaviour
         checkForReward();
     }
 
+    void LoadingScreen()
+    {
+        if (Loading_Screen.alpha == 0)
+        {
+            Loading_Screen.alpha = 1;
+        }
+        GameObject obj = GameObject.Find("Progressbar_Loading");
+        Progressbar progressbar = obj.GetComponent<Progressbar>();
+        progressbar.maximum = 100;
+        progressbar.minimum = 0;
+        progressbar.current = 0;
+
+        while (progressbar.current < 100)
+        {
+            //init list spawnedentetiesfor use later
+            spawnedEnteties = new();
+            //set save file location
+            loadGamePath = Application.persistentDataPath + FileName;
+            //checking if the save file exists
+            progressbar.current = 10;
+            if (!File.Exists(loadGamePath))
+            {
+                bugSquasher("No savegame");
+                //no save found so starting with default values
+                defaultValues();
+                progressbar.current = 50;
+                StartCoroutine(CheckForSpawn(spawnDelay));
+                progressbar.current = 75;
+            }
+            else if (File.Exists(loadGamePath))
+            {
+                bugSquasher("Savegame Detector");
+                //file exists so loading and aplying game data
+                progressbar.current = 50;
+                loader();
+                progressbar.current = 60;
+                StartCoroutine(CheckForSpawn(spawnDelay));
+                progressbar.current = 75;
+            }
+            //naar 300f zetten voor build
+            rewardDelay = 30f;
+            progressbar.current = 80;
+            //timer that adds coins every second
+            StartCoroutine(CoinsTimer(coinDelay));
+            //timer that saves the game every 60 seconds
+            StartCoroutine(SaveTimer(saveDelay));
+            progressbar.current = 100;
+        }
+
+        Loading_Screen.alpha = 0f;
+        Loading_Screen.interactable = false;
+        Loading_Screen.blocksRaycasts = false;
+        
+    }
+
+    
+    public void bugSquasher(string linetoadd)
+    {
+        bool emptySpace = false;
+        for (int i = 0; i < bugList.Count; i++)
+        {
+            if (bugList[i].text == "")
+            {
+                emptySpace = true;
+                bugList[i].text = linetoadd;
+                break;
+            }
+        }
+        if (emptySpace == false)
+        {
+            bugList[4].text = bugList[3].text;
+            bugList[3].text = bugList[2].text;
+            bugList[2].text = bugList[1].text;
+            bugList[1].text = bugList[0].text;
+            bugList[0].text = linetoadd;
+        }
+    }
+
     void defaultValues()
     {
         Debug.Log("No Save");
         freeSpawnCreature();
+        bugSquasher("free spawned a entetie");
         setDefaultSpawnDelay();
+        bugSquasher("setted spawn delay");
         expNeeded = defaultExpNeeded;
+        bugSquasher("set defauld exp");
         maxOfflineTimeH = defaultMaxOfflineTimeH;
         maxOfflineTimeM = defaultMaxOfflineTimeM;
         maxOffline = TimeSpan.Parse("00:01:00");
+        bugSquasher("setted default max online time");
         setOfflineTimeText();
         setSpawnTimeText();
+        bugSquasher("setted default spawn time");
         maxEnteties = 10;
         maxUpgradeCost = defaultMaxUpgradeCost;
         maxEntetiesUpgradeCostText.text = maxUpgradeCost.ToString();
+        bugSquasher("end of setting defaults");
     }
 
     void loader()
@@ -174,16 +271,15 @@ public class GameManager : MonoBehaviour
         }
     }
     
-    void CheckForSpawn(float delay)
+    IEnumerator CheckForSpawn(float delay)
     {
-        timerSpawn += Time.deltaTime;
-        if (timerSpawn >= delay)
+        while (true)
         {
+            yield return new WaitForSeconds(delay);
             freeSpawnCreature();
-            timerSpawn -= delay;
         }
-
     }
+
 
     void checkEnteties()
     {
@@ -218,7 +314,7 @@ public class GameManager : MonoBehaviour
 
         Transform newPos = ent.transform;
 
-        Destroy(ent);
+        
 
         return newPos;
     }
@@ -230,11 +326,11 @@ public class GameManager : MonoBehaviour
 
     public void freeSpawnCreature()
     {
-        Transform pos = getSpawnPos(Enteties[0]);
+        Transform pose = getSpawnPos(Enteties[0]);
         GameObject entetie = Enteties[0];
         getSpawned(Enteties[0].name);
         CoinsPerSecond += 0.05f;
-        Instantiate(entetie, pos);
+        GameObject newentetie = Instantiate(entetie, pose);
     }
 
     void setSpawnTimeText()
@@ -459,7 +555,9 @@ public class GameManager : MonoBehaviour
         if (cost <= current)
         {
             //buy
+            StopCoroutine(CheckForSpawn(spawnDelay));
             spawnDelay -= 0.1f;
+            StartCoroutine(CheckForSpawn(spawnDelay));
             current -= cost;
             cost += SpawnUpgradeCostIncrement;
             costSpawnTimerUpgrade.text = cost.ToString();

@@ -1,25 +1,29 @@
 					merge game/idle game
-
 upgrade menu nog mooier maken
 nog meer voormpjes maken
-
 reward delay moet naar 300f als de game gebuild word
-
-enteties bewegennog een beetje raar
-
-touch controls toevoegen
-rewards die op het scherm komen afmaken, breakpoint is waar het fout gaat
 offline tijd gaat niet goed
+laadscherm mooier maken
 
+aan laadscherm toevoegen:
+google login
+google ads of gelijken initialiseren
+
+zorgen dat de enteties mergen
+de manier dat eneties mergen aanpassen zodat het precieser word
+
+enteties bewegen nog een beetje raar
+tweening tutorial kijken en toepassen
+modal window tutorial kijken en maken
+rewards die op het scherm komen afmaken, breakpoint is waar het fout gaat
+(meschien niet spawnen maar elke keer enablen en veranderen van tekst!)
 leeftijds check bij eerste start
-google ads of gelijken implementeren
 
  upgrades verzinnen:
 -enteties meer waard
 -getimde spawn hoogere kans hogere te spawnen
 
 achtergrond maken
-
 diamanten en power-ups:
 -time skip
 2h, 4h, 8h, 12h, 24h
@@ -30,19 +34,14 @@ met levels
 1 dag, 1 week, 4 weken
 
 updates en extra's
-
 minigames:
 -chrome dino spel
 -rad
 -memmory
-
 prestige kunnen gaan
-
 goedkoop adloos voor altijd aanbieden
-
 adloos voor coins??? belachelijk bedrag
 nieuwe werelden die geld kosten
-
 quests
 daily rewards
 
@@ -126,3 +125,31 @@ ik heb timers omgeschreven naar coroutines waar toepasselijk
 code gestroomlijnd peformance is aanzienelijk verbeterd
 ik heb er voor gezorgd dat de enteties rondlopen
 
+-------------------------------------------------
+
+changelog 25-02-2024
+
+ik heb de game op google play gezet en getest 
+er worden geen enteties gespawned wtf
+het slepen werk ook nog niet
+
+
+-------------------------------------------------
+
+changelog 26-02-2024
+
+google play services toegevoegd
+geprobeerd om enteties oppakbaar te maken
+
+-------------------------------------------------
+
+changelog 28-02-2024
+
+Touch controls werken eindelijk
+schaduw toegevoegd aan de knoppen op het upgrades scherm
+enteties spawnen nu ook op de telefoon
+het slepen van de enteties werkt nu ook
+ik heb een laadscherm gemaakt
+ik heb een progressbar gemaakt voor op het laadscherm
+ik heb een herbruikbaare progressbar gemaakt
+het ziet er nu goed uit op elke telefoon

@@ -1,18 +1,16 @@
 using System.Collections.Generic;
 using System.Data.SqlTypes;
+using System.Security.Cryptography;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+
 public class Entetie : MonoBehaviour
 {
-    
-
     GameObject manager;
     GameManager game;
-    List<GameObject> list;
-    
-    private Vector2 mousePos;
-    private float offsetX, offsetY;
+    List<GameObject> Entlist;
+    public bool touched = false;
     private const string Threek = GameManager.Threek;
     private const string Cube = GameManager.Cube;
     private const string Thrat = GameManager.Thrat;
@@ -21,104 +19,156 @@ public class Entetie : MonoBehaviour
     private const string zes = GameManager.zes;
     private const string zeven = GameManager.zeven;
     public static bool mouseButtonReleased;
- 
+    Transform selected;
+    float dist;
+    Vector3 Offset;
+    BoxCollider2D collider2D;
+    int Height, Width;
+    float X, Y, speed;
+    Vector2 Destination;
+    bool gotDestination = false;
+    Rigidbody2D spritePos;
+    int t = 0;
 
     public void Start()
     {
         manager = GameObject.Find("GameManager");
-        game = manager.GetComponent<GameManager>(); 
-        list = game.Enteties;
+        game = manager.GetComponent<GameManager>();
+        Entlist = game.Enteties;
+        collider2D = GetComponent<BoxCollider2D>();
+        Height = Screen.height;
+        Width = Screen.width;
+        spritePos = GetComponent<Rigidbody2D>();
+        speed = 200f;
+        game.bugSquasher("Start Executed on Entetie");
     }
-
-    void Touch()
+    
+    void Update()
     {
-        
+        Vector3 v3;
+
+        if (Input.touchCount == 0)
+        {
+            game.bugSquasher("No Touch");
+            touched = false;
+            return;
+        }
+
+        Touch touch = Input.GetTouch(0);
+        Vector2 pos = touch.position;
+
+        if (touch.phase == TouchPhase.Began)
+        {
+           game.bugSquasher("Touch began");
+            
+            RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(pos), Vector2.zero);
+
+            if (hit.collider != null)
+            {
+                game.bugSquasher("hit something");
+                if (hit.collider.gameObject.name != null)
+                {
+                    selected = hit.transform;
+                    game.bugSquasher("hit a gameobject with a name");
+                    dist = selected.position.z;
+                    v3 = new Vector2(pos.x, pos.y);
+                    v3 = Camera.main.ScreenToWorldPoint(v3);
+                    Offset = selected.position - v3;
+                    touched = true;
+                }
+            }
+        }
+
+        if (touched && touch.phase == TouchPhase.Moved)
+        {
+            game.bugSquasher("Touch moved");
+            v3 = new Vector3(touch.position.x, touch.position.y, dist);
+            v3 = Camera.main.ScreenToWorldPoint(v3);
+            selected.position = v3 + Offset;
+        }
+
+        if (touched && touch.phase == TouchPhase.Ended)
+        {
+            game.bugSquasher("Touch ended");
+
+            List<Collider2D> colliders = new();
+            ContactFilter2D contactFilter2D = new();
+            collider2D.OverlapCollider(contactFilter2D, colliders);
+            if (colliders.Count > 0)
+            {
+                int indexOfColliders;
+                for (int i = 0; i < colliders.Count; i++)
+                {
+                    string tmp = colliders[i].gameObject.name;
+                    if (tmp == selected.name)
+                    {
+                        indexOfColliders = i;
+                        GameObject temp = new();
+                        temp.name = removePartOfString(selected.name, "(Clone)");
+                        int indexList = Entlist.IndexOf(temp);
+                        Debug.Log("Index of object in list: " + indexList);
+                        Destroy(temp);
+                        indexList++;
+                        Instantiate(Entlist[indexList], selected.position, Quaternion.identity);
+                        mouseButtonReleased = false;
+                        game.getSpawned(Entlist[indexList].name);
+                        game.addExp(1f);
+                        Destroy(colliders[indexOfColliders].gameObject);
+                        Destroy(gameObject);
+                        break;
+                    }
+                }
+
+            }
+
+            touched = false;
+
+        }
     }
 
-    private void OnMouseDown()
+    void FixedUpdate()
     {
-        mouseButtonReleased = false;
-        offsetX = Camera.main.ScreenToWorldPoint(Input.mousePosition).x - transform.position.x;
-        offsetY = Camera.main.ScreenToWorldPoint(Input.mousePosition).y - transform.position.y;
+        if (!gotDestination)
+        {
+            Destination = GetDestination();
+        }
+        if (gotDestination)
+        {
+            {
+                Destination = Destination.normalized;
+                Vector2 move = Destination * speed * Time.deltaTime;
+                spritePos.AddForce(move);
+                gotDestination = false;
+
+            }
+        }
     }
 
-    private void OnMouseDrag()
+    string removePartOfString(string originalString, string substringToRemove)
     {
-        mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        transform.position = new Vector2(mousePos.x - offsetX, mousePos.y - offsetY);
-    }
+        int index = originalString.IndexOf(substringToRemove);
 
-    private void OnMouseUp()
+        if(index != -1)
+        {
+            string resultString = originalString.Remove(index, substringToRemove.Length);
+            return resultString;
+        }
+        else
+        {
+            return "error";
+        }
+    }
+   
+
+    Vector2 GetDestination()
     {
-        mouseButtonReleased = true;
+        Y = Random.Range(0, Height);
+        X = Random.Range(0, Width);
+
+        Vector2 des = new Vector2(X, Y);
+        gotDestination = true;
+
+        return des -= spritePos.position;
     }
 
-    private void OnTriggerStay2D(Collider2D collision)
-    {
-        string thisGameobjectName;
-        string collisionGameobjectName;
-
-        thisGameobjectName = gameObject.name;
-        collisionGameobjectName = collision.gameObject.name;
-
-        if (mouseButtonReleased && thisGameobjectName == "Threek(Clone)" && thisGameobjectName == collisionGameobjectName)
-        {
-            Instantiate(list[1], transform.position, Quaternion.identity);
-            mouseButtonReleased = false;
-            game.getSpawned(Cube);
-            game.addExp(1f);
-            Destroy(collision.gameObject);
-            Destroy(gameObject);
-        }
-        
-        else if (mouseButtonReleased && thisGameobjectName == "Cube(Clone)" && thisGameobjectName == collisionGameobjectName)
-        {
-            Instantiate(list[2], transform.position, Quaternion.identity);
-            mouseButtonReleased = false;
-            game.getSpawned(Thrat);
-            game.addExp(2f);
-            Destroy(collision.gameObject);
-            Destroy(gameObject);
-        }
-        
-        else if (mouseButtonReleased && thisGameobjectName == "Trhat(Clone)" && thisGameobjectName == collisionGameobjectName)
-        {
-            Instantiate(list[3], transform.position, Quaternion.identity);
-            mouseButtonReleased = false;
-            game.getSpawned(Cube2);
-            game.addExp(3f);
-            Destroy(collision.gameObject);
-            Destroy(gameObject);
-        }
-        
-        else if (mouseButtonReleased && thisGameobjectName == "Cube2(Clone)" && thisGameobjectName == collisionGameobjectName)
-        {
-            Instantiate(list[4], transform.position, Quaternion.identity);
-            mouseButtonReleased = false;
-            game.getSpawned(vijf);
-            game.addExp(4f);
-            Destroy(collision.gameObject);
-            Destroy(gameObject);
-        }
-        
-        else if (mouseButtonReleased && thisGameobjectName == "5(Clone)" && thisGameobjectName == collisionGameobjectName)
-        {
-            Instantiate(list[5], transform.position, Quaternion.identity);
-            mouseButtonReleased = false;
-            game.getSpawned(zes);
-            game.addExp(5f);
-            Destroy(collision.gameObject);
-            Destroy(gameObject);
-        }
-        
-        else if (mouseButtonReleased && thisGameobjectName == "6(Clone)" && thisGameobjectName == collisionGameobjectName)
-        {
-            Instantiate(list[6], transform.position, Quaternion.identity);
-            mouseButtonReleased = false;
-            game.getSpawned(zeven);
-            game.addExp(6f);
-            Destroy(collision.gameObject);
-            Destroy(gameObject);
-        }
-    }
 }
