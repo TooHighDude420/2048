@@ -8,6 +8,12 @@ using UnityEngine;
 using UnityEngine.UI;
 using GooglePlayGames;
 using GooglePlayGames.BasicApi;
+using GoogleMobileAds.Api;
+using System.Threading.Tasks;
+using System.Runtime.InteropServices.WindowsRuntime;
+using UnityEngine.UIElements;
+using UnityEngine.Rendering;
+
 
 public class GameManager : MonoBehaviour
 {
@@ -19,7 +25,6 @@ public class GameManager : MonoBehaviour
     public CanvasGroup Upgrades_Screen;
     public CanvasGroup UI;
     public CanvasGroup Loading_Screen;
-    public GameObject coinReward;
     public bool touched = false;
     public List<TextMeshProUGUI> bugList;
     //private varriables to use in the code
@@ -29,23 +34,30 @@ public class GameManager : MonoBehaviour
     private TimeSpan maxOffline;
     private string lastDateTime;
     private List<string> spawnedEnteties;
-    private float CoinsPerSecond, current,  timerReward,  spawnDelay, exp, expNeeded, rewardDelay, reward;
+    private float CoinsPerSecond, current,  timerReward,  spawnDelay,  rewardDelay, reward, TimerEnt;
     private string loadGamePath;
-    private int level, maxOfflineTimeH, maxOfflineTimeM, maxEnteties, curEntetiesOnScreen, maxUpgradeCost, Spawned;
-    private bool exceeded;
+    private int level, maxOfflineTimeH, maxOfflineTimeM, maxEnteties, curEntetiesOnScreen, maxUpgradeCost, Spawned, exp, expNeeded;
+    private bool exceeded, ads_Init;
+    private GameObject coinHolder;
     //contant variables to use in the code
-    private const float defaultExpNeeded = 10f, coinDelay = 1f,
-        saveDelay = 60f, SpawnUpgradeCostIncrement = 100f;
+    private const float  coinDelay = 1f,saveDelay = 60f, SpawnUpgradeCostIncrement = 100f;
     private const int defaultMaxOfflineTimeH = 1, defaultMaxOfflineTimeM = 0, 
-        defaultMaxUpgradeCost = 100;
+        defaultMaxUpgradeCost = 100, defaultExpNeeded = 10;
     public const string Threek = "Threek", Cube = "Cube", Thrat = "Thrat", Cube2 = "Cube2", vijf = "5", zes = "6", zeven = "7";
-    private const string FileName = "/PlayerData.json";
+    private const string FileName = "/PlayerData.json", BannerTestId = "ca-app-pub-3940256099942544/6300978111";
     Action<string> code;
-    
+    Action<InitializationStatus> initStatus;
+    Progressbar Entetie_Bar;
+    Progressbar Exp_Bar;
+    BannerView banner;
+
+
 
     private void Awake()
     {
-        LoadingScreen();
+        
+        StartCoroutine(LoadingScreen());
+        
     }
     private void Start()
     {
@@ -71,78 +83,207 @@ public class GameManager : MonoBehaviour
 
         
     }
-
     private void Update()
     {
         //checking if there are more enteties than allowed
         checkEnteties();
-        if (exceeded)
+        if (!exceeded)
         {
             //timer that checks if it is time to spawn a entetie
-            StopCoroutine(CheckForSpawn(spawnDelay));
+            CheckForSpawn(spawnDelay);
+           
+           
         }
         //set the text that displays the exp
         CheckForExpUpdate();
         //checks if it is time for a on screen reward
         checkForReward();
     }
+    private void ListenToAdEvents()
+    {
+        // Raised when an ad is loaded into the banner view.
+        banner.OnBannerAdLoaded += () =>
+        {
+            Debug.Log("Banner view loaded an ad with response : "
+                + banner.GetResponseInfo());
+        };
+        // Raised when an ad fails to load into the banner view.
+        banner.OnBannerAdLoadFailed += (LoadAdError error) =>
+        {
+            Debug.LogError("Banner view failed to load an ad with error : "
+                + error);
+        };
+        // Raised when the ad is estimated to have earned money.
+        banner.OnAdPaid += (AdValue adValue) =>
+        {
+            Debug.Log(String.Format("Banner view paid {0} {1}.",
+                adValue.Value,
+                adValue.CurrencyCode));
+        };
+        // Raised when an impression is recorded for an ad.
+        banner.OnAdImpressionRecorded += () =>
+        {
+            Debug.Log("Banner view recorded an impression.");
+        };
+        // Raised when a click is recorded for an ad.
+        banner.OnAdClicked += () =>
+        {
+            Debug.Log("Banner view was clicked.");
+        };
+        // Raised when an ad opened full screen content.
+        banner.OnAdFullScreenContentOpened += () =>
+        {
+            Debug.Log("Banner view full screen content opened.");
+        };
+        // Raised when the ad closed full screen content.
+        banner.OnAdFullScreenContentClosed += () =>
+        {
+            Debug.Log("Banner view full screen content closed.");
+        };
+    }
+    void CreateBannerAd()
+    {
+        Debug.Log("Creating banner view");
 
-    void LoadingScreen()
+        // If we already have a banner, destroy the old one.
+        if (banner != null)
+        {
+            banner.Destroy();
+            banner = null;
+        }
+
+        // Create a 320x50 banner at the bottom of the screen
+        banner = new BannerView(BannerTestId, AdSize.Banner, AdPosition.Bottom);
+        
+    }
+    public void LoadAd()
+    {
+        // create an instance of a banner view first.
+        if (banner == null)
+        {
+            CreateBannerAd();
+        }
+
+        // create our request used to load the ad.
+        var adRequest = new AdRequest();
+
+        // send the request to load the ad.
+        Debug.Log("Loading banner ad.");
+        banner.LoadAd(adRequest);
+    }
+    void InitEntetieBar()
+    {
+        GameObject obj = GameObject.Find("Progressbar_Enteties");
+        Entetie_Bar = obj.GetComponent<Progressbar>();
+        Entetie_Bar.minimum = 0;
+        Entetie_Bar.maximum = maxEnteties;
+    }
+    void InitExpBar()
+    {
+        GameObject obj = GameObject.Find("RadialProgressBarExp");
+        Exp_Bar = obj.GetComponent<Progressbar>();
+    }
+    public IEnumerator LoadGame()
+    {
+        spawnedEnteties = new();
+        loadGamePath = Application.persistentDataPath + FileName;
+        if (!File.Exists(loadGamePath))
+        {
+            bugSquasher("No savegame");
+            //no save found so starting with default values
+            defaultValues();
+        }
+        else if (File.Exists(loadGamePath))
+        {
+            load(loadGamePath);
+        }
+        inits();
+        yield return null;
+    }
+    void inits()
+    {
+        rewardDelay = 30f;
+        StartCoroutine(initAds());
+        CreateBannerAd();
+        ListenToAdEvents();
+        LoadAd();
+        StartCoroutine(CoinsTimer(coinDelay));
+        StartCoroutine(SaveTimer(saveDelay));
+        InitEntetieBar();
+        InitExpBar();
+        bugSquasher("initialized ads");
+        CheckDifDateTime();
+        setOfflineTimeText();
+        setSpawnTimeText();
+        curEntetiesOnScreen = spawnedEnteties.Count;
+        coinHolder = GameObject.Find("CoinsRewardHolder");
+    }
+    void load(string path)
+    {
+        string loadPlayerData = File.ReadAllText(path);
+        save = JsonUtility.FromJson<SaveManager>(loadPlayerData);
+        current = save.coins;
+        CoinsPerSecond = save.coinsPerSecond;
+        spawnedEnteties = save.list;
+        spawnDelay = save.timerspawn;
+        exp = save.curExp;
+        levelText.text = save.curLvl.ToString();
+        expNeeded = save.nextLvl;
+        lastDateTime = save.curDateTime;
+        maxOfflineTimeH = save.maxOfflineTimeH;
+        maxOfflineTimeM = save.maxOfflineTimeM;
+        string maxTimeSpan = "00:" + maxOfflineTimeH.ToString("00") + ':' + maxOfflineTimeM.ToString("00");
+        maxOffline = TimeSpan.Parse(maxTimeSpan);
+        costOfflineTimeUpgrade.text = save.offlineCost.ToString();
+        costSpawnTimerUpgrade.text = save.spawnCost.ToString();
+        maxEnteties = save.maxEnt;
+        maxUpgradeCost = save.maxCost;
+        maxEntetiesUpgradeCostText.text = save.maxCost.ToString();
+        actualMaxEnteties.text = save.maxEnt.ToString();
+
+        int countIndex = spawnedEnteties.Count;
+        Transform pos;
+        for (int i = 0; i < countIndex; i++)
+        {
+
+            if (spawnedEnteties[i] == Threek)
+            {
+                pos = getSpawnPos(Enteties[0]);
+                Instantiate(Enteties[0], pos);
+            }
+            else if (spawnedEnteties[i] == Cube)
+            {
+                pos = getSpawnPos(Enteties[1]);
+                Instantiate(Enteties[1], pos);
+            }
+            else if (spawnedEnteties[i] == Thrat)
+            {
+                pos = getSpawnPos(Enteties[2]);
+                Instantiate(Enteties[2], pos);
+            }
+            else if (spawnedEnteties[i] == Cube2)
+            {
+                pos = getSpawnPos(Enteties[3]);
+                Instantiate(Enteties[3], pos);
+            }
+        }
+        
+    }
+    public IEnumerator LoadingScreen()
     {
         if (Loading_Screen.alpha == 0)
         {
             Loading_Screen.alpha = 1;
         }
-        GameObject obj = GameObject.Find("Progressbar_Loading");
-        Progressbar progressbar = obj.GetComponent<Progressbar>();
-        progressbar.maximum = 100;
-        progressbar.minimum = 0;
-        progressbar.current = 0;
-
-        while (progressbar.current < 100)
-        {
-            //init list spawnedentetiesfor use later
-            spawnedEnteties = new();
-            //set save file location
-            loadGamePath = Application.persistentDataPath + FileName;
-            //checking if the save file exists
-            progressbar.current = 10;
-            if (!File.Exists(loadGamePath))
-            {
-                bugSquasher("No savegame");
-                //no save found so starting with default values
-                defaultValues();
-                progressbar.current = 50;
-                StartCoroutine(CheckForSpawn(spawnDelay));
-                progressbar.current = 75;
-            }
-            else if (File.Exists(loadGamePath))
-            {
-                bugSquasher("Savegame Detector");
-                //file exists so loading and aplying game data
-                progressbar.current = 50;
-                loader();
-                progressbar.current = 60;
-                StartCoroutine(CheckForSpawn(spawnDelay));
-                progressbar.current = 75;
-            }
-            //naar 300f zetten voor build
-            rewardDelay = 30f;
-            progressbar.current = 80;
-            //timer that adds coins every second
-            StartCoroutine(CoinsTimer(coinDelay));
-            //timer that saves the game every 60 seconds
-            StartCoroutine(SaveTimer(saveDelay));
-            progressbar.current = 100;
-        }
+        
+        yield return StartCoroutine(LoadGame());
 
         Loading_Screen.alpha = 0f;
         Loading_Screen.interactable = false;
         Loading_Screen.blocksRaycasts = false;
-        
-    }
 
-    
+        yield return null;
+    }
     public void bugSquasher(string linetoadd)
     {
         bool emptySpace = false;
@@ -164,7 +305,14 @@ public class GameManager : MonoBehaviour
             bugList[0].text = linetoadd;
         }
     }
-
+    IEnumerator initAds()
+    {
+        MobileAds.Initialize(initStatus => { ads_Init = true; });
+        while(!ads_Init)
+        {
+            yield return null;
+        }
+    }
     void defaultValues()
     {
         Debug.Log("No Save");
@@ -186,20 +334,6 @@ public class GameManager : MonoBehaviour
         maxEntetiesUpgradeCostText.text = maxUpgradeCost.ToString();
         bugSquasher("end of setting defaults");
     }
-
-    void loader()
-    {
-        loadGame(loadGamePath);
-        //checking time user was away
-        CheckDifDateTime();
-        //setting the text in the store for the time upgrade
-        setOfflineTimeText();
-        //setting the text for the spawn time upgrade
-        setSpawnTimeText();
-        //setting how many enteties there are for use later
-        curEntetiesOnScreen = spawnedEnteties.Count;
-    }
-
     void CheckDifDateTime()
     {
         DateTime CurDateTime = DateTime.Now;
@@ -232,27 +366,26 @@ public class GameManager : MonoBehaviour
         }
         
     }
-
     void CheckForExpUpdate()
-   {
-            CurentExp.text = exp.ToString() + '/' + expNeeded.ToString();  
-   }
-   
+    {
+        Exp_Bar.current = exp;
+        Exp_Bar.maximum = expNeeded;
+    }
     void checkForReward()
     {
         timerReward += Time.deltaTime;
         if (timerReward >= rewardDelay)
         {
+            
+            rewardText = coinHolder.GetComponentInChildren<TextMeshProUGUI>();
             reward = getPercentCoins();
-            Transform pos = getSpawnPos(coinReward);
-            Instantiate(coinReward, pos);
-            rewardText = coinReward.GetComponentInChildren<TextMeshProUGUI>();
             rewardText.text = '+' + reward.ToString("0");
-            coinReward.GetComponentInChildren<Button>().onClick.AddListener(delegate { rewardOnScreen(); });            
+            Transform pos = getSpawnPos(coinHolder);
+            coinHolder.transform.position = pos.position;
+            coinHolder.SetActive(true);
             timerReward -= rewardDelay;
         }
     }
-
     IEnumerator CoinsTimer(float delay)
     {
         while (true)
@@ -261,7 +394,6 @@ public class GameManager : MonoBehaviour
             setCoins();
         }
     }
-
     IEnumerator SaveTimer(float Delay)
     {
         while (true)
@@ -270,20 +402,19 @@ public class GameManager : MonoBehaviour
             SaveGame();
         }
     }
-    
-    IEnumerator CheckForSpawn(float delay)
+    void CheckForSpawn(float delay)
     {
-        while (true)
+        TimerEnt += Time.deltaTime;
+        if (TimerEnt >= delay)
         {
-            yield return new WaitForSeconds(delay);
             freeSpawnCreature();
+            TimerEnt -= delay;
         }
     }
-
-
     void checkEnteties()
     {
         curEntetiesOnScreen = spawnedEnteties.Count;
+        Entetie_Bar.current = curEntetiesOnScreen;
         currentEntetiesOnScreen.text = spawnedEnteties.Count.ToString() + '/' + maxEnteties;
         if (curEntetiesOnScreen >= maxEnteties)
         {
@@ -294,14 +425,12 @@ public class GameManager : MonoBehaviour
             exceeded = false;
         }
     }
-
     float getPercentCoins()
     {
         int amount = UnityEngine.Random.Range(1, 100);
         float perc = current / 100 * amount;
         return perc;
     }
-
     public Transform getSpawnPos(GameObject ent)
     {
         int height = Screen.height;
@@ -318,12 +447,10 @@ public class GameManager : MonoBehaviour
 
         return newPos;
     }
-
     public void setDefaultSpawnDelay()
     {
         spawnDelay = 5f;
     }
-
     public void freeSpawnCreature()
     {
         Transform pose = getSpawnPos(Enteties[0]);
@@ -332,19 +459,14 @@ public class GameManager : MonoBehaviour
         CoinsPerSecond += 0.05f;
         GameObject newentetie = Instantiate(entetie, pose);
     }
-
     void setSpawnTimeText()
     {
         actualSpawnTime.text = spawnDelay.ToString("0.00") + "sec";
     }
-
     void setOfflineTimeText()
     {
         actualOfflineTime.text = maxOfflineTimeH.ToString("00") + 'H' + maxOfflineTimeM.ToString("00") + 'M';
     }
-
-
-    //keertje chekcen of het goedgaat hiero
     public void getSpawned(string spawned)
     {
         spawnedEnteties.Add(spawned);
@@ -405,7 +527,6 @@ public class GameManager : MonoBehaviour
             CoinsPerSecond += 10;
         }
     }
-
     public void setCoins()
     {
         
@@ -423,62 +544,6 @@ public class GameManager : MonoBehaviour
         coinPerSecText.text = CoinsPerSecond.ToString("0.0") + "ps"; 
 
     }
-
-    public void loadGame(string saveLocations)
-    { 
-        string loadPlayerData = File.ReadAllText(saveLocations);
-        save = JsonUtility.FromJson<SaveManager>(loadPlayerData);
-
-        current = save.coins;
-        CoinsPerSecond = save.coinsPerSecond;
-        spawnedEnteties = save.list;
-        spawnDelay = save.timerspawn;
-        exp = save.curExp;
-        levelText.text = save.curLvl.ToString();
-        expNeeded = save.nextLvl;
-        lastDateTime = save.curDateTime;
-        maxOfflineTimeH = save.maxOfflineTimeH;
-        maxOfflineTimeM = save.maxOfflineTimeM;
-        string maxTimeSpan = "00:" + maxOfflineTimeH.ToString("00") + ':' + maxOfflineTimeM.ToString("00");
-        maxOffline = TimeSpan.Parse(maxTimeSpan);
-        costOfflineTimeUpgrade.text = save.offlineCost.ToString();
-        costSpawnTimerUpgrade.text = save.spawnCost.ToString();
-        maxEnteties = save.maxEnt;
-        maxUpgradeCost = save.maxCost;
-        maxEntetiesUpgradeCostText.text = save.maxCost.ToString();
-        actualMaxEnteties.text = save.maxEnt.ToString();
-
-        int countIndex = spawnedEnteties.Count;
-        Transform pos;
-        for (int i = 0; i < countIndex; i++)
-        {
-            
-            if (spawnedEnteties[i] == Threek)
-            {
-                pos = getSpawnPos(Enteties[0]);
-                Instantiate(Enteties[0], pos);
-            }
-            else if (spawnedEnteties[i] == Cube)
-            {
-                pos = getSpawnPos(Enteties[1]);
-                Instantiate(Enteties[1], pos);
-            } 
-            else if (spawnedEnteties[i] == Thrat)
-            {
-                pos = getSpawnPos(Enteties[2]);
-                Instantiate(Enteties[2], pos);
-            }
-            else if (spawnedEnteties[i] == Cube2)
-            {
-                pos = getSpawnPos(Enteties[3]);
-                Instantiate(Enteties[3], pos);
-            }
-        }
-
-        Debug.Log("Loaded game");
-        
-    }
-
     public void SaveGame()
     {
         string currentDateTime = DateTime.Now.ToString();
@@ -506,7 +571,6 @@ public class GameManager : MonoBehaviour
         File.WriteAllText(saveFilePath, saveGameData);
         Debug.Log("saved game");
     }
-
     void levelUp()
     {
         if (expNeeded <= exp)
@@ -515,23 +579,19 @@ public class GameManager : MonoBehaviour
             level++;
             current += level * 50;
             levelText.text = level.ToString();
-            exp = 0;
-            expNeeded += expNeeded * .5f;
+            Exp_Bar.minimum = exp;
+            expNeeded += expNeeded * 2;
         }
         else
         {
             //nolevelup yet
         }
     }
-
-    public void addExp(float amount)
+    public void addExp(int amount)
     {
         exp += amount;
         levelUp();
     }
-
-    //functies voor op knoppen
-
     public void openStore()
     {
         Time.timeScale = 0;
@@ -539,7 +599,6 @@ public class GameManager : MonoBehaviour
         Upgrades_Screen.interactable = true;
         Upgrades_Screen.blocksRaycasts = true;
     }
-
     public void closeStore()
     {
         Upgrades_Screen.alpha = 0f;
@@ -547,17 +606,13 @@ public class GameManager : MonoBehaviour
         Upgrades_Screen.blocksRaycasts = false;
         Time.timeScale = 1;
     }
-
-    //upgrade functies
     public void SpawnUpgrade()
     {
         float cost = float.Parse(costSpawnTimerUpgrade.text);
         if (cost <= current)
         {
             //buy
-            StopCoroutine(CheckForSpawn(spawnDelay));
             spawnDelay -= 0.1f;
-            StartCoroutine(CheckForSpawn(spawnDelay));
             current -= cost;
             cost += SpawnUpgradeCostIncrement;
             costSpawnTimerUpgrade.text = cost.ToString();
@@ -571,7 +626,6 @@ public class GameManager : MonoBehaviour
         }
         
     }
-
     public void OfflineUpgrade()
     {
         float cost = float.Parse(costOfflineTimeUpgrade.text);
@@ -600,13 +654,13 @@ public class GameManager : MonoBehaviour
         }
         
     }
-
     public void maxEntetieUpgrade()
     {
         int cost = maxUpgradeCost;
         if (current >= cost)
         {
             maxEnteties++;
+            Entetie_Bar.maximum = maxEnteties;
             current -= cost;
             setCoins();
             actualMaxEnteties.text = maxEnteties.ToString();
@@ -616,11 +670,10 @@ public class GameManager : MonoBehaviour
         }
         
     }
-
     public void rewardOnScreen()
     {
         current += reward;
         rewardDelay = UnityEngine.Random.Range(60f, 300f);
-        Destroy(coinReward);
+        coinHolder.SetActive(false);
     }
 }

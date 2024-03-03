@@ -5,23 +5,26 @@ reward delay moet naar 300f als de game gebuild word
 offline tijd gaat niet goed
 laadscherm mooier maken
 
-aan laadscherm toevoegen:
-google login
-google ads of gelijken initialiseren
+zorgen dat je elke x minuten een grote advertentie krijgt
+banner ad dan ook verversen
 
+touch controls stroomlijnen
 zorgen dat de enteties mergen
 de manier dat eneties mergen aanpassen zodat het precieser word
+
+aan laadscherm toevoegen:
+google login
 
 enteties bewegen nog een beetje raar
 tweening tutorial kijken en toepassen
 modal window tutorial kijken en maken
-rewards die op het scherm komen afmaken, breakpoint is waar het fout gaat
-(meschien niet spawnen maar elke keer enablen en veranderen van tekst!)
 leeftijds check bij eerste start
 
  upgrades verzinnen:
 -enteties meer waard
 -getimde spawn hoogere kans hogere te spawnen
+-exp per merge omhoog
+-tijd voor dat je een advertentie krijgt
 
 achtergrond maken
 diamanten en power-ups:
@@ -153,3 +156,19 @@ ik heb een laadscherm gemaakt
 ik heb een progressbar gemaakt voor op het laadscherm
 ik heb een herbruikbaare progressbar gemaakt
 het ziet er nu goed uit op elke telefoon
+
+-------------------------------------------------
+
+changelog 29-02-2024
+
+ik heb een progressbars toevoegvoegd aan de enteties op scherm
+ik heb een progressbars toevoegvoegd aan de levels en exp 
+ik heb ervoor gezorgd dat je niet meer meer dan het maximum aantal aan enteties kan hebben
+
+-------------------------------------------------
+
+changelog 03-03-2024
+
+random beloningen gemaakt
+laden process gestroomlijnd (hopelijk)
+google ads kan nu gebruikt worden

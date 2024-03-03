@@ -89,30 +89,33 @@ public class Entetie : MonoBehaviour
 
         if (touched && touch.phase == TouchPhase.Ended)
         {
-            game.bugSquasher("Touch ended");
+            
 
             List<Collider2D> colliders = new();
             ContactFilter2D contactFilter2D = new();
             collider2D.OverlapCollider(contactFilter2D, colliders);
             if (colliders.Count > 0)
             {
+                game.bugSquasher("dropped and collided");
                 int indexOfColliders;
                 for (int i = 0; i < colliders.Count; i++)
                 {
+                    game.bugSquasher("collided with " + i.ToString() + " Objects");
                     string tmp = colliders[i].gameObject.name;
                     if (tmp == selected.name)
                     {
+                        game.bugSquasher("collided with a object with the same name");
                         indexOfColliders = i;
                         GameObject temp = new();
                         temp.name = removePartOfString(selected.name, "(Clone)");
                         int indexList = Entlist.IndexOf(temp);
-                        Debug.Log("Index of object in list: " + indexList);
+                        game.bugSquasher("Index of object in list: " + indexList);
                         Destroy(temp);
                         indexList++;
                         Instantiate(Entlist[indexList], selected.position, Quaternion.identity);
                         mouseButtonReleased = false;
                         game.getSpawned(Entlist[indexList].name);
-                        game.addExp(1f);
+                        game.addExp(1);
                         Destroy(colliders[indexOfColliders].gameObject);
                         Destroy(gameObject);
                         break;

@@ -10,9 +10,9 @@ public class SaveManager
     public float coinsPerSecond;
     public float timerspawn;
     public int totalSpawned;
-    public float curExp;
+    public int curExp;
     public int curLvl;
-    public float nextLvl;
+    public int nextLvl;
     public string curDateTime;
     public int maxOfflineTimeH;
     public int maxOfflineTimeM;
