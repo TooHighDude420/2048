@@ -9,10 +9,7 @@ using UnityEngine.UI;
 using GooglePlayGames;
 using GooglePlayGames.BasicApi;
 using GoogleMobileAds.Api;
-using System.Threading.Tasks;
-using System.Runtime.InteropServices.WindowsRuntime;
-using UnityEngine.UIElements;
-using UnityEngine.Rendering;
+
 
 
 public class GameManager : MonoBehaviour
@@ -21,12 +18,12 @@ public class GameManager : MonoBehaviour
     public TextMeshProUGUI coinText, costSpawnTimerUpgrade, CurentExp, coinPerSecText, levelText,
         currentEntetiesOnScreen, actualMaxEnteties, maxEntetiesUpgradeCostText, costOfflineTimeUpgrade,
         actualSpawnTime, actualOfflineTime;
+    public CanvasGroup Upgrades_Screen, UI, Loading_Screen;
+    [Space(10)]
     public List<GameObject> Enteties;
-    public CanvasGroup Upgrades_Screen;
-    public CanvasGroup UI;
-    public CanvasGroup Loading_Screen;
-    public bool touched = false;
     public List<TextMeshProUGUI> bugList;
+    public GameObject coinHolder;
+    public bool touched = false;
     //private varriables to use in the code
     private TextMeshProUGUI rewardText;
     private SaveManager save;
@@ -34,30 +31,27 @@ public class GameManager : MonoBehaviour
     private TimeSpan maxOffline;
     private string lastDateTime;
     private List<string> spawnedEnteties;
-    private float CoinsPerSecond, current,  timerReward,  spawnDelay,  rewardDelay, reward, TimerEnt;
+    private float CoinsPerSecond, current,  timerReward,  spawnDelay,  rewardDelay, reward, TimerEnt, TimerAds, AdsDelay;
     private string loadGamePath;
     private int level, maxOfflineTimeH, maxOfflineTimeM, maxEnteties, curEntetiesOnScreen, maxUpgradeCost, Spawned, exp, expNeeded;
-    private bool exceeded, ads_Init;
-    private GameObject coinHolder;
+    private bool exceeded;
     //contant variables to use in the code
     private const float  coinDelay = 1f,saveDelay = 60f, SpawnUpgradeCostIncrement = 100f;
     private const int defaultMaxOfflineTimeH = 1, defaultMaxOfflineTimeM = 0, 
         defaultMaxUpgradeCost = 100, defaultExpNeeded = 10;
     public const string Threek = "Threek", Cube = "Cube", Thrat = "Thrat", Cube2 = "Cube2", vijf = "5", zes = "6", zeven = "7";
-    private const string FileName = "/PlayerData.json", BannerTestId = "ca-app-pub-3940256099942544/6300978111";
+    private const string FileName = "/PlayerData.json";
     Action<string> code;
-    Action<InitializationStatus> initStatus;
+    CommerFunctionsClassUnity helper;
     Progressbar Entetie_Bar;
     Progressbar Exp_Bar;
-    BannerView banner;
-
 
 
     private void Awake()
     {
-        
+        helper = GetComponent<CommerFunctionsClassUnity>();
         StartCoroutine(LoadingScreen());
-        
+        AdsDelay = 60f;
     }
     private void Start()
     {
@@ -91,86 +85,16 @@ public class GameManager : MonoBehaviour
         {
             //timer that checks if it is time to spawn a entetie
             CheckForSpawn(spawnDelay);
-           
-           
         }
         //set the text that displays the exp
         CheckForExpUpdate();
         //checks if it is time for a on screen reward
         checkForReward();
+        //checks if it is time for a ad
+        CheckForAd();
     }
-    private void ListenToAdEvents()
-    {
-        // Raised when an ad is loaded into the banner view.
-        banner.OnBannerAdLoaded += () =>
-        {
-            Debug.Log("Banner view loaded an ad with response : "
-                + banner.GetResponseInfo());
-        };
-        // Raised when an ad fails to load into the banner view.
-        banner.OnBannerAdLoadFailed += (LoadAdError error) =>
-        {
-            Debug.LogError("Banner view failed to load an ad with error : "
-                + error);
-        };
-        // Raised when the ad is estimated to have earned money.
-        banner.OnAdPaid += (AdValue adValue) =>
-        {
-            Debug.Log(String.Format("Banner view paid {0} {1}.",
-                adValue.Value,
-                adValue.CurrencyCode));
-        };
-        // Raised when an impression is recorded for an ad.
-        banner.OnAdImpressionRecorded += () =>
-        {
-            Debug.Log("Banner view recorded an impression.");
-        };
-        // Raised when a click is recorded for an ad.
-        banner.OnAdClicked += () =>
-        {
-            Debug.Log("Banner view was clicked.");
-        };
-        // Raised when an ad opened full screen content.
-        banner.OnAdFullScreenContentOpened += () =>
-        {
-            Debug.Log("Banner view full screen content opened.");
-        };
-        // Raised when the ad closed full screen content.
-        banner.OnAdFullScreenContentClosed += () =>
-        {
-            Debug.Log("Banner view full screen content closed.");
-        };
-    }
-    void CreateBannerAd()
-    {
-        Debug.Log("Creating banner view");
 
-        // If we already have a banner, destroy the old one.
-        if (banner != null)
-        {
-            banner.Destroy();
-            banner = null;
-        }
-
-        // Create a 320x50 banner at the bottom of the screen
-        banner = new BannerView(BannerTestId, AdSize.Banner, AdPosition.Bottom);
-        
-    }
-    public void LoadAd()
-    {
-        // create an instance of a banner view first.
-        if (banner == null)
-        {
-            CreateBannerAd();
-        }
-
-        // create our request used to load the ad.
-        var adRequest = new AdRequest();
-
-        // send the request to load the ad.
-        Debug.Log("Loading banner ad.");
-        banner.LoadAd(adRequest);
-    }
+    //functions to inisiate the progressbars
     void InitEntetieBar()
     {
         GameObject obj = GameObject.Find("Progressbar_Enteties");
@@ -183,6 +107,8 @@ public class GameManager : MonoBehaviour
         GameObject obj = GameObject.Find("RadialProgressBarExp");
         Exp_Bar = obj.GetComponent<Progressbar>();
     }
+
+    //functions for loading and saving the game
     public IEnumerator LoadGame()
     {
         spawnedEnteties = new();
@@ -203,10 +129,13 @@ public class GameManager : MonoBehaviour
     void inits()
     {
         rewardDelay = 30f;
-        StartCoroutine(initAds());
-        CreateBannerAd();
-        ListenToAdEvents();
-        LoadAd();
+        StartCoroutine(helper.initAds());
+        helper.CreateBannerAd();
+        helper.ListenToAdEvents();
+        helper.LoadAd();
+        helper.LoadInterstitialAd();
+        helper.RegisterEventHandlers(helper.interstitial);
+        helper.RegisterReloadHandler(helper.interstitial);
         StartCoroutine(CoinsTimer(coinDelay));
         StartCoroutine(SaveTimer(saveDelay));
         InitEntetieBar();
@@ -216,7 +145,6 @@ public class GameManager : MonoBehaviour
         setOfflineTimeText();
         setSpawnTimeText();
         curEntetiesOnScreen = spawnedEnteties.Count;
-        coinHolder = GameObject.Find("CoinsRewardHolder");
     }
     void load(string path)
     {
@@ -305,14 +233,35 @@ public class GameManager : MonoBehaviour
             bugList[0].text = linetoadd;
         }
     }
-    IEnumerator initAds()
+    public void SaveGame()
     {
-        MobileAds.Initialize(initStatus => { ads_Init = true; });
-        while(!ads_Init)
+        string currentDateTime = DateTime.Now.ToString();
+        save = new()
         {
-            yield return null;
-        }
+            list = spawnedEnteties,
+            coins = current,
+            coinsPerSecond = CoinsPerSecond,
+            timerspawn = spawnDelay,
+            totalSpawned = Spawned,
+            curExp = exp,
+            curLvl = level,
+            nextLvl = expNeeded,
+            curDateTime = currentDateTime,
+            maxOfflineTimeH = maxOfflineTimeH,
+            maxOfflineTimeM = maxOfflineTimeM,
+            spawnCost = float.Parse(costSpawnTimerUpgrade.text),
+            offlineCost = float.Parse(costOfflineTimeUpgrade.text),
+            maxEnt = maxEnteties,
+            maxCost = maxUpgradeCost
+        };
+        string saveFilePath = Application.persistentDataPath + FileName;
+        string saveGameData = JsonUtility.ToJson(save);
+
+        File.WriteAllText(saveFilePath, saveGameData);
+        Debug.Log("saved game");
     }
+
+    //misc start up functions
     void defaultValues()
     {
         Debug.Log("No Save");
@@ -366,6 +315,36 @@ public class GameManager : MonoBehaviour
         }
         
     }
+    IEnumerator CoinsTimer(float delay)
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(delay);
+            setCoins();
+        }
+    }
+    IEnumerator SaveTimer(float Delay)
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(Delay);
+            SaveGame();
+        }
+    }
+    public void setDefaultSpawnDelay()
+    {
+        spawnDelay = 5f;
+    }
+    void setSpawnTimeText()
+    {
+        actualSpawnTime.text = spawnDelay.ToString("0.00") + "sec";
+    }
+    void setOfflineTimeText()
+    {
+        actualOfflineTime.text = maxOfflineTimeH.ToString("00") + 'H' + maxOfflineTimeM.ToString("00") + 'M';
+    }
+
+    //functions for in update()
     void CheckForExpUpdate()
     {
         Exp_Bar.current = exp;
@@ -384,22 +363,6 @@ public class GameManager : MonoBehaviour
             coinHolder.transform.position = pos.position;
             coinHolder.SetActive(true);
             timerReward -= rewardDelay;
-        }
-    }
-    IEnumerator CoinsTimer(float delay)
-    {
-        while (true)
-        {
-            yield return new WaitForSeconds(delay);
-            setCoins();
-        }
-    }
-    IEnumerator SaveTimer(float Delay)
-    {
-        while (true)
-        {
-            yield return new WaitForSeconds(Delay);
-            SaveGame();
         }
     }
     void CheckForSpawn(float delay)
@@ -425,6 +388,26 @@ public class GameManager : MonoBehaviour
             exceeded = false;
         }
     }
+    public void freeSpawnCreature()
+    {
+        Transform pose = getSpawnPos(Enteties[0]);
+        GameObject entetie = Enteties[0];
+        getSpawned(Enteties[0].name);
+        CoinsPerSecond += 0.05f;
+        GameObject newentetie = Instantiate(entetie, pose);
+    }
+    void CheckForAd()
+    {
+        TimerAds += Time.deltaTime;
+
+        if(TimerAds >= AdsDelay)
+        {
+            helper.ShowInterstitialAd();
+            TimerAds -= AdsDelay;
+        }
+    }
+
+    //functions to make other functions work
     float getPercentCoins()
     {
         int amount = UnityEngine.Random.Range(1, 100);
@@ -446,26 +429,6 @@ public class GameManager : MonoBehaviour
         
 
         return newPos;
-    }
-    public void setDefaultSpawnDelay()
-    {
-        spawnDelay = 5f;
-    }
-    public void freeSpawnCreature()
-    {
-        Transform pose = getSpawnPos(Enteties[0]);
-        GameObject entetie = Enteties[0];
-        getSpawned(Enteties[0].name);
-        CoinsPerSecond += 0.05f;
-        GameObject newentetie = Instantiate(entetie, pose);
-    }
-    void setSpawnTimeText()
-    {
-        actualSpawnTime.text = spawnDelay.ToString("0.00") + "sec";
-    }
-    void setOfflineTimeText()
-    {
-        actualOfflineTime.text = maxOfflineTimeH.ToString("00") + 'H' + maxOfflineTimeM.ToString("00") + 'M';
     }
     public void getSpawned(string spawned)
     {
@@ -544,33 +507,6 @@ public class GameManager : MonoBehaviour
         coinPerSecText.text = CoinsPerSecond.ToString("0.0") + "ps"; 
 
     }
-    public void SaveGame()
-    {
-        string currentDateTime = DateTime.Now.ToString();
-        save = new()
-        {
-            list = spawnedEnteties,
-            coins = current,
-            coinsPerSecond = CoinsPerSecond,
-            timerspawn = spawnDelay,
-            totalSpawned = Spawned,
-            curExp = exp,
-            curLvl = level,
-            nextLvl = expNeeded,
-            curDateTime = currentDateTime,
-            maxOfflineTimeH = maxOfflineTimeH,
-            maxOfflineTimeM = maxOfflineTimeM,
-            spawnCost = float.Parse(costSpawnTimerUpgrade.text),
-            offlineCost = float.Parse(costOfflineTimeUpgrade.text),
-            maxEnt = maxEnteties,
-            maxCost = maxUpgradeCost
-        };
-        string saveFilePath = Application.persistentDataPath + FileName;
-        string saveGameData = JsonUtility.ToJson(save);
-
-        File.WriteAllText(saveFilePath, saveGameData);
-        Debug.Log("saved game");
-    }
     void levelUp()
     {
         if (expNeeded <= exp)
@@ -592,6 +528,8 @@ public class GameManager : MonoBehaviour
         exp += amount;
         levelUp();
     }
+
+    //functions for on buttons
     public void openStore()
     {
         Time.timeScale = 0;

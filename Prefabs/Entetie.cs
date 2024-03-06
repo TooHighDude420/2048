@@ -89,9 +89,12 @@ public class Entetie : MonoBehaviour
 
         if (touched && touch.phase == TouchPhase.Ended)
         {
-            
-
             List<Collider2D> colliders = new();
+            for (int i = 0; i < colliders.Count; i++)
+            {
+                game.bugSquasher("collided with: " + colliders[i].name);          
+            }
+
             ContactFilter2D contactFilter2D = new();
             collider2D.OverlapCollider(contactFilter2D, colliders);
             if (colliders.Count > 0)

@@ -4,19 +4,22 @@ nog meer voormpjes maken
 reward delay moet naar 300f als de game gebuild word
 offline tijd gaat niet goed
 laadscherm mooier maken
+kijken of ik ergens GameObjects maak en niet loslaat
+(alleen kopie loslaten!)
+kijken of er gegeven zijn die ik moet opslaan en ophalen
+(delays)
+eandom beloningen spawn locaties aanpassen
 
-zorgen dat je elke x minuten een grote advertentie krijgt
-banner ad dan ook verversen
-
-touch controls stroomlijnen
 zorgen dat de enteties mergen
 de manier dat eneties mergen aanpassen zodat het precieser word
+touch controls stroomlijnen
+enteties bewegen nog een beetje raar
+tweening tutorial kijken en toepassen
 
 aan laadscherm toevoegen:
 google login
 
-enteties bewegen nog een beetje raar
-tweening tutorial kijken en toepassen
+
 modal window tutorial kijken en maken
 leeftijds check bij eerste start
 
@@ -172,3 +175,19 @@ changelog 03-03-2024
 random beloningen gemaakt
 laden process gestroomlijnd (hopelijk)
 google ads kan nu gebruikt worden
+
+-------------------------------------------------
+
+changelog 04-03-2024
+
+random beloningen gemaakt
+ruimte gemaakt voor de banner
+verschillende ui elementen een schaduw gegeven
+zorgen dat je elke x minuten een grote advertentie krijgt
+banner ad dan word ook ververst
+
+-------------------------------------------------
+
+changelog 05-03-2024
+
+game werkt weer
